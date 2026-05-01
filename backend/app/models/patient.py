@@ -15,6 +15,11 @@ class Patient(Base):
     diagnosis = Column(String(200))
     tcm_diagnosis = Column(String(200))
     notes = Column(Text)
+    allergy_history = Column(Text)          # 过敏史
+    past_history = Column(Text)             # 既往史
+    family_history = Column(Text)           # 家族史
+    admission_assessment = Column(Text)     # 入院评估
+    discharge_summary = Column(Text)        # 出院小结
 
     tcm_scores = relationship("TcmScore", back_populates="patient", cascade="all, delete-orphan")
     lab_tests = relationship("LabTest", back_populates="patient", cascade="all, delete-orphan")

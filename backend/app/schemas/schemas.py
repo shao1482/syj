@@ -13,6 +13,11 @@ class PatientCreate(BaseModel):
     diagnosis: Optional[str] = None
     tcm_diagnosis: Optional[str] = None
     notes: Optional[str] = None
+    allergy_history: Optional[str] = None
+    past_history: Optional[str] = None
+    family_history: Optional[str] = None
+    admission_assessment: Optional[str] = None
+    discharge_summary: Optional[str] = None
 
 
 class PatientUpdate(BaseModel):
@@ -24,6 +29,11 @@ class PatientUpdate(BaseModel):
     diagnosis: Optional[str] = None
     tcm_diagnosis: Optional[str] = None
     notes: Optional[str] = None
+    allergy_history: Optional[str] = None
+    past_history: Optional[str] = None
+    family_history: Optional[str] = None
+    admission_assessment: Optional[str] = None
+    discharge_summary: Optional[str] = None
 
 
 class PatientOut(BaseModel):
@@ -36,6 +46,11 @@ class PatientOut(BaseModel):
     diagnosis: Optional[str]
     tcm_diagnosis: Optional[str]
     notes: Optional[str]
+    allergy_history: Optional[str]
+    past_history: Optional[str]
+    family_history: Optional[str]
+    admission_assessment: Optional[str]
+    discharge_summary: Optional[str]
 
     model_config = {"from_attributes": True}
 

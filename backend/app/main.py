@@ -1,8 +1,8 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from app.database import engine, Base
-from app.models import Patient, TcmScore, LabTest, QualityOfLife, Treatment, Alert
-from app.routers import patient, tcm, lab, qol, treatment, alert, report
+from app.models import Patient, TcmScore, LabTest, QualityOfLife, Treatment, Alert, FollowupPlan
+from app.routers import patient, tcm, lab, qol, treatment, alert, report, followup
 
 Base.metadata.create_all(bind=engine)
 
@@ -23,3 +23,4 @@ app.include_router(qol.router)
 app.include_router(treatment.router)
 app.include_router(alert.router)
 app.include_router(report.router)
+app.include_router(followup.router)

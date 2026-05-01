@@ -1,6 +1,13 @@
 <template>
   <div v-if="patient">
-    <el-page-header @back="$router.push('/patients')" :content="patient.name" style="margin-bottom: 16px;" />
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
+      <el-page-header @back="$router.push('/patients')" :content="patient.name" />
+      <div>
+        <el-button type="success" @click="exportPdf">导出PDF</el-button>
+        <el-button @click="exportLabExcel">导出检验Excel</el-button>
+        <el-button type="warning" @click="openEditDialog">编辑</el-button>
+      </div>
+    </div>
 
     <el-descriptions title="患者基本信息" :column="3" border style="margin-bottom: 20px;">
       <el-descriptions-item label="姓名">{{ patient.name }}</el-descriptions-item>
@@ -10,8 +17,58 @@
       <el-descriptions-item label="入院日期">{{ patient.admission_date }}</el-descriptions-item>
       <el-descriptions-item label="西医诊断">{{ patient.diagnosis }}</el-descriptions-item>
       <el-descriptions-item label="中医诊断">{{ patient.tcm_diagnosis }}</el-descriptions-item>
-      <el-descriptions-item label="备注">{{ patient.notes }}</el-descriptions-item>
+      <el-descriptions-item label="过敏史">{{ patient.allergy_history || '无' }}</el-descriptions-item>
+      <el-descriptions-item label="既往史">{{ patient.past_history || '无' }}</el-descriptions-item>
+      <el-descriptions-item label="家族史">{{ patient.family_history || '无' }}</el-descriptions-item>
+      <el-descriptions-item label="入院评估">{{ patient.admission_assessment || '未填写' }}</el-descriptions-item>
+      <el-descriptions-item label="出院小结">{{ patient.discharge_summary || '未填写' }}</el-descriptions-item>
+      <el-descriptions-item label="备注">{{ patient.notes || '无' }}</el-descriptions-item>
     </el-descriptions>
+
+    <!-- 编辑患者对话框 -->
+    <el-dialog v-model="showEditDialog" title="编辑患者信息" width="700px">
+      <el-form :model="editForm" label-width="80px">
+        <el-row :gutter="20">
+          <el-col :span="12">
+            <el-form-item label="姓名"><el-input v-model="editForm.name" /></el-form-item>
+          </el-col>
+          <el-col :span="12">
+            <el-form-item label="性别">
+              <el-select v-model="editForm.gender">
+                <el-option label="男" value="男" /><el-option label="女" value="女" />
+              </el-select>
+            </el-form-item>
+          </el-col>
+        </el-row>
+        <el-row :gutter="20">
+          <el-col :span="12">
+            <el-form-item label="年龄"><el-input-number v-model="editForm.age" :min="0" :max="120" /></el-form-item>
+          </el-col>
+          <el-col :span="12">
+            <el-form-item label="电话"><el-input v-model="editForm.phone" /></el-form-item>
+          </el-col>
+        </el-row>
+        <el-row :gutter="20">
+          <el-col :span="12">
+            <el-form-item label="入院日期"><el-date-picker v-model="editForm.admission_date" type="date" value-format="YYYY-MM-DD" /></el-form-item>
+          </el-col>
+          <el-col :span="12">
+            <el-form-item label="西医诊断"><el-input v-model="editForm.diagnosis" /></el-form-item>
+          </el-col>
+        </el-row>
+        <el-form-item label="中医诊断"><el-input v-model="editForm.tcm_diagnosis" /></el-form-item>
+        <el-form-item label="过敏史"><el-input v-model="editForm.allergy_history" type="textarea" :rows="2" /></el-form-item>
+        <el-form-item label="既往史"><el-input v-model="editForm.past_history" type="textarea" :rows="2" /></el-form-item>
+        <el-form-item label="家族史"><el-input v-model="editForm.family_history" type="textarea" :rows="2" /></el-form-item>
+        <el-form-item label="入院评估"><el-input v-model="editForm.admission_assessment" type="textarea" :rows="2" /></el-form-item>
+        <el-form-item label="出院小结"><el-input v-model="editForm.discharge_summary" type="textarea" :rows="2" /></el-form-item>
+        <el-form-item label="备注"><el-input v-model="editForm.notes" type="textarea" :rows="2" /></el-form-item>
+      </el-form>
+      <template #footer>
+        <el-button @click="showEditDialog = false">取消</el-button>
+        <el-button type="primary" @click="handleEditSave">保存</el-button>
+      </template>
+    </el-dialog>
 
     <el-tabs v-model="activeTab">
       <el-tab-pane label="中医证候" name="tcm">
@@ -70,6 +127,14 @@
           <el-table-column prop="followup_note" label="随访记录" />
         </el-table>
       </el-tab-pane>
+
+      <el-tab-pane label="疗效评价" name="efficacy">
+        <EfficacyView :patientId="patient.id" />
+      </el-tab-pane>
+
+      <el-tab-pane label="随访管理" name="followup">
+        <FollowupView />
+      </el-tab-pane>
     </el-tabs>
   </div>
 </template>
@@ -79,16 +144,22 @@ import { ref, computed, onMounted, watch } from 'vue'
 import { useRoute } from 'vue-router'
 import { usePatientStore } from '../stores/patient'
 import { useClinicalStore } from '../stores/clinical'
+import { ElMessage } from 'element-plus'
+import api from '../api'
 import TcmScoreForm from '../components/TcmScoreForm.vue'
 import LabTestForm from '../components/LabTestForm.vue'
 import QolForm from '../components/QolForm.vue'
 import TreatmentForm from '../components/TreatmentForm.vue'
 import TrendChart from '../components/TrendChart.vue'
+import EfficacyView from '../components/EfficacyView.vue'
+import FollowupView from '../views/FollowupView.vue'
 
 const route = useRoute()
 const store = usePatientStore()
 const clinical = useClinicalStore()
 const activeTab = ref('tcm')
+const showEditDialog = ref(false)
+const editForm = ref({})
 
 const patient = computed(() => store.currentPatient)
 
@@ -98,8 +169,6 @@ const tcmChartData = computed(() => ({
 }))
 
 const labChartData = computed(() => {
-  const blood = clinical.labTests.filter(t => t.test_type === 'blood_routine')
-  const liver = clinical.labTests.filter(t => t.test_type === 'liver_func')
   const allDates = clinical.labTests.map(t => t.record_date)
   return {
     xData: allDates,
@@ -125,6 +194,39 @@ function loadTcm() { clinical.fetchTcmScores(route.params.id) }
 function loadLab() { clinical.fetchLabTests(route.params.id) }
 function loadQol() { clinical.fetchQol(route.params.id) }
 function loadTreatment() { clinical.fetchTreatments(route.params.id) }
+
+function openEditDialog() {
+  editForm.value = { ...patient.value }
+  showEditDialog.value = true
+}
+
+async function handleEditSave() {
+  await store.updatePatient(route.params.id, editForm.value)
+  showEditDialog.value = false
+  ElMessage.success('修改成功')
+}
+
+async function exportPdf() {
+  const res = await api.exportPatientPdf(route.params.id)
+  const url = window.URL.createObjectURL(new Blob([res.data]))
+  const a = document.createElement('a')
+  a.href = url
+  a.download = `患者报告_${patient.value?.name || ''}.pdf`
+  a.click()
+  window.URL.revokeObjectURL(url)
+  ElMessage.success('PDF已导出')
+}
+
+async function exportLabExcel() {
+  const res = await api.exportLabExcel(route.params.id)
+  const url = window.URL.createObjectURL(new Blob([res.data]))
+  const a = document.createElement('a')
+  a.href = url
+  a.download = '检验数据.xlsx'
+  a.click()
+  window.URL.revokeObjectURL(url)
+  ElMessage.success('Excel已导出')
+}
 
 watch(activeTab, (tab) => {
   if (tab === 'tcm') loadTcm()

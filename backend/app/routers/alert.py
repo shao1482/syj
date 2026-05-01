@@ -4,11 +4,17 @@ from typing import List, Optional
 from app.database import get_db
 from app.models.alert import Alert
 from app.schemas.schemas import AlertOut, AlertResolve
+from app.services.alert_engine import get_alert_config
 
 router = APIRouter(prefix="/api/alerts", tags=["alerts"])
 
 
-@router.get("/", response_model=List[AlertOut])
+@router.get("/config")
+def alert_config():
+    return get_alert_config()
+
+
+@router.get("/list", response_model=List[AlertOut])
 def list_alerts(status: Optional[str] = None, level: Optional[str] = None, db: Session = Depends(get_db)):
     q = db.query(Alert).order_by(Alert.created_at.desc())
     if status:
@@ -35,3 +41,8 @@ def resolve_alert(id: int, data: AlertResolve, db: Session = Depends(get_db)):
     db.commit()
     db.refresh(alert)
     return alert
+
+
+@router.get("/config")
+def alert_config():
+    return get_alert_config()

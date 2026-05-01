@@ -4,3 +4,4 @@ from app.models.lab_test import LabTest
 from app.models.quality_of_life import QualityOfLife
 from app.models.treatment import Treatment
 from app.models.alert import Alert
+from app.models.followup_plan import FollowupPlan

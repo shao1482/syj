@@ -30,10 +30,31 @@ export default {
   createTreatment: (pid, data) => request.post(`/patients/${pid}/treatments/`, data),
 
   // 预警
-  getAlerts: (params) => request.get('/alerts/', { params }),
+  getAlerts: (params) => request.get('/alerts/list', { params }),
   resolveAlert: (id) => request.put(`/alerts/${id}`, { status: 'resolved' }),
+  getAlertConfig: () => request.get('/alerts/config'),
 
   // 报表
   getOverview: () => request.get('/reports/overview'),
   getTrend: (pid) => request.get(`/reports/trend/${pid}`),
+
+  // PDF导出
+  exportPatientPdf: (id) => request.get(`/reports/patient/${id}/pdf`, { responseType: 'blob' }),
+
+  // Excel导入导出
+  exportPatientsExcel: () => request.get('/reports/export/patients', { responseType: 'blob' }),
+  exportLabExcel: (pid) => request.get(`/reports/export/lab-tests/${pid}`, { responseType: 'blob' }),
+  importPatientsExcel: (file) => {
+    const formData = new FormData()
+    formData.append('file', file)
+    return request.post('/reports/import/patients', formData, { headers: { 'Content-Type': 'multipart/form-data' } })
+  },
+
+  // 疗效评价
+  getEfficacy: (pid) => request.get(`/reports/efficacy/${pid}`),
+
+  // 随访管理
+  getFollowups: (pid) => request.get(`/patients/${pid}/followups/`),
+  createFollowup: (pid, data) => request.post(`/patients/${pid}/followups/`, data),
+  getFollowupReminders: () => request.get('/followups/reminders/'),
 }
