@@ -11,9 +11,7 @@ from app.models.quality_of_life import QualityOfLife
 from app.models.treatment import Treatment
 from app.models.alert import Alert
 from app.services.pdf_service import generate_patient_pdf
-from app.models.treatment import Treatment
-from app.models.alert import Alert
-from app.services.pdf_service import generate_patient_pdf
+from app.services.analysis_engine import generate_patient_analysis, load_analysis_config
 
 router = APIRouter(prefix="/api/reports", tags=["reports"])
 
@@ -166,3 +164,23 @@ def efficacy_evaluation(patient_id: int, db: Session = Depends(get_db)):
         }
 
     return result
+
+
+# === AI智能分析 ===
+@router.post("/ai-analysis/{patient_id}")
+def ai_analysis(patient_id: int, db: Session = Depends(get_db)):
+    return generate_patient_analysis(patient_id, db)
+
+
+@router.get("/analysis-config")
+def get_analysis_config():
+    return load_analysis_config()
+
+
+@router.put("/analysis-config")
+def update_analysis_config(config: dict):
+    import json
+    from app.services.analysis_engine import ANALYSIS_CONFIG_PATH
+    with open(ANALYSIS_CONFIG_PATH, "w", encoding="utf-8") as f:
+        json.dump(config, f, ensure_ascii=False, indent=2)
+    return config

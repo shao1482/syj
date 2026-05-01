@@ -1,7 +1,7 @@
 <template>
   <el-card header="录入实验室检验" style="margin-bottom: 16px;">
     <el-form :model="form" label-width="100px" inline>
-      <el-form-item label="日期"><el-date-picker v-model="form.record_date" type="date" /></el-form-item>
+      <el-form-item label="日期"><el-date-picker v-model="form.record_date" type="date" value-format="YYYY-MM-DD" /></el-form-item>
       <el-form-item label="类型">
         <el-select v-model="form.test_type" style="width: 120px;">
           <el-option label="血常规" value="blood_routine" />
@@ -27,6 +27,7 @@
 <script setup>
 import { ref } from 'vue'
 import api from '../api'
+import { ElMessage } from 'element-plus'
 
 const props = defineProps({ patientId: Number })
 const emit = defineEmits(['saved'])
@@ -40,7 +41,16 @@ const form = ref({
 })
 
 async function submit() {
-  await api.createLabTest(props.patientId, form.value)
-  emit('saved')
+  if (!form.value.record_date) {
+    ElMessage.warning('请选择日期')
+    return
+  }
+  try {
+    await api.createLabTest(props.patientId, form.value)
+    ElMessage.success('提交成功')
+    emit('saved')
+  } catch (e) {
+    ElMessage.error('提交失败: ' + (e.response?.data?.detail || e.message))
+  }
 }
 </script>

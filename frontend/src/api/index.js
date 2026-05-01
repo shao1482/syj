@@ -33,6 +33,10 @@ export default {
   getAlerts: (params) => request.get('/alerts/list', { params }),
   resolveAlert: (id) => request.put(`/alerts/${id}`, { status: 'resolved' }),
   getAlertConfig: () => request.get('/alerts/config'),
+  updateAlertConfig: (data) => request.put('/alerts/config', data),
+
+  // AI数据分析
+  aiAnalysis: (pid) => request.post(`/reports/ai-analysis/${pid}`),
 
   // 报表
   getOverview: () => request.get('/reports/overview'),

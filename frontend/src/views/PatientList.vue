@@ -2,7 +2,7 @@
   <div>
     <el-card>
       <div style="display: flex; justify-content: space-between; margin-bottom: 16px;">
-        <el-input v-model="search" placeholder="搜索患者姓名/诊断" style="width: 300px;" clearable />
+        <el-input v-model="search" placeholder="搜索姓名/诊断" style="width: 180px;" clearable size="small" />
         <div>
           <el-button @click="exportExcel">导出Excel</el-button>
           <el-upload :show-file-list="false" :before-upload="importExcel" accept=".xlsx">
