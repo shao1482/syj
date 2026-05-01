@@ -12,6 +12,8 @@ from app.models.treatment import Treatment
 from app.models.alert import Alert
 from app.services.pdf_service import generate_patient_pdf
 from app.services.analysis_engine import generate_patient_analysis, load_analysis_config
+from app.models.followup_plan import FollowupPlan
+from app.services.agents.pipeline import AnalysisPipeline
 
 router = APIRouter(prefix="/api/reports", tags=["reports"])
 
@@ -21,10 +23,14 @@ def overview(db: Session = Depends(get_db)):
     total_patients = db.query(Patient).count()
     pending_alerts = db.query(Alert).filter(Alert.status == "pending").count()
     high_alerts = db.query(Alert).filter(Alert.level == "high", Alert.status == "pending").count()
+    high_risk_patients = db.query(Patient).filter(Patient.risk_level == "high").count()
+    overdue_followups = db.query(FollowupPlan).filter(FollowupPlan.status == "overdue").count()
     return {
         "total_patients": total_patients,
         "pending_alerts": pending_alerts,
         "high_alerts": high_alerts,
+        "high_risk_patients": high_risk_patients,
+        "overdue_followups": overdue_followups,
     }
 
 
@@ -170,6 +176,12 @@ def efficacy_evaluation(patient_id: int, db: Session = Depends(get_db)):
 @router.post("/ai-analysis/{patient_id}")
 def ai_analysis(patient_id: int, db: Session = Depends(get_db)):
     return generate_patient_analysis(patient_id, db)
+
+
+@router.post("/agent-analysis/{patient_id}")
+def agent_analysis(patient_id: int, db: Session = Depends(get_db)):
+    pipeline = AnalysisPipeline(patient_id, db)
+    return pipeline.run()
 
 
 @router.get("/analysis-config")

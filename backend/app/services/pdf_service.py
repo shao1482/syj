@@ -45,10 +45,22 @@ def generate_patient_pdf(patient, tcm_scores, lab_tests, qol_records, treatments
         [Paragraph('入院日期', styles['CNNormal']), Paragraph(str(patient.admission_date) if patient.admission_date else '', styles['CNNormal']),
          Paragraph('西医诊断', styles['CNNormal']), Paragraph(patient.diagnosis or '', styles['CNNormal']),
          Paragraph('中医诊断', styles['CNNormal']), Paragraph(patient.tcm_diagnosis or '', styles['CNNormal'])],
+        [Paragraph('门诊号', styles['CNNormal']), Paragraph(getattr(patient, 'patient_no', '') or '', styles['CNNormal']),
+         Paragraph('住院号', styles['CNNormal']), Paragraph(getattr(patient, 'inpatient_no', '') or '', styles['CNNormal']),
+         Paragraph('科室', styles['CNNormal']), Paragraph(getattr(patient, 'department', '') or '', styles['CNNormal'])],
         [Paragraph('过敏史', styles['CNNormal']), Paragraph(patient.allergy_history or '无', styles['CNNormal']),
          Paragraph('既往史', styles['CNNormal']), Paragraph(patient.past_history or '无', styles['CNNormal']),
          Paragraph('家族史', styles['CNNormal']), Paragraph(patient.family_history or '无', styles['CNNormal'])],
     ]
+    risk_level = getattr(patient, 'risk_level', None)
+    status_val = getattr(patient, 'status', '在院')
+    if risk_level or status_val:
+        risk_map = {'low': '低风险', 'medium': '中风险', 'high': '高风险'}
+        info_data.append([
+            Paragraph('状态', styles['CNNormal']), Paragraph(status_val, styles['CNNormal']),
+            Paragraph('风险等级', styles['CNNormal']), Paragraph(risk_map.get(risk_level, '未评估'), styles['CNNormal']),
+            Paragraph('责任医生', styles['CNNormal']), Paragraph(getattr(patient, 'responsible_doctor', '') or '', styles['CNNormal']),
+        ])
     info_table = Table(info_data, colWidths=[35*mm, 50*mm, 35*mm, 50*mm, 35*mm, 50*mm])
     info_table.setStyle(TableStyle([
         ('GRID', (0, 0), (-1, -1), 0.5, colors.grey),
@@ -146,6 +158,18 @@ def generate_patient_pdf(patient, tcm_scores, lab_tests, qol_records, treatments
             ('BACKGROUND', (0, 0), (-1, 0), colors.lightgrey),
         ]))
         story.append(alert_table)
+
+    # 未处理预警摘要
+    pending_alerts = [a for a in alerts if a.status == 'pending']
+    if pending_alerts:
+        story.append(Spacer(1, 10))
+        story.append(Paragraph("七、未处理预警摘要", styles['CNHeading']))
+        for pa in pending_alerts:
+            story.append(Paragraph(f"  [{pa.level}] {pa.message}", styles['CNNormal']))
+
+    # 免责声明
+    story.append(Spacer(1, 15))
+    story.append(Paragraph("免责声明：本报告为辅助参考工具，不构成最终诊断。所有医疗决策应由执业医师综合判断。", styles['CNNormal']))
 
     doc.build(story)
     return output_path

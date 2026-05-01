@@ -15,11 +15,20 @@ class Patient(Base):
     diagnosis = Column(String(200))
     tcm_diagnosis = Column(String(200))
     notes = Column(Text)
-    allergy_history = Column(Text)          # 过敏史
-    past_history = Column(Text)             # 既往史
-    family_history = Column(Text)           # 家族史
-    admission_assessment = Column(Text)     # 入院评估
-    discharge_summary = Column(Text)        # 出院小结
+    allergy_history = Column(Text)
+    past_history = Column(Text)
+    family_history = Column(Text)
+    admission_assessment = Column(Text)
+    discharge_summary = Column(Text)
+    # 新增临床业务字段
+    patient_no = Column(String(50), default='')          # 门诊号
+    inpatient_no = Column(String(50), default='')        # 住院号(可选)
+    bed_no = Column(String(20), default='')              # 床号(可选)
+    department = Column(String(100), default='')         # 科室(可选)
+    responsible_doctor = Column(String(100), default='') # 责任医生(可选)
+    responsible_nurse = Column(String(100), default='')  # 责任护士(可选)
+    status = Column(String(20), default='在院')          # 在院/出院/随访中/结案/失访
+    risk_level = Column(String(20))                      # low/medium/high
 
     tcm_scores = relationship("TcmScore", back_populates="patient", cascade="all, delete-orphan")
     lab_tests = relationship("LabTest", back_populates="patient", cascade="all, delete-orphan")

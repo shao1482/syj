@@ -15,6 +15,17 @@
         <el-table-column prop="name" label="姓名" width="100" />
         <el-table-column prop="gender" label="性别" width="80" />
         <el-table-column prop="age" label="年龄" width="80" />
+        <el-table-column prop="status" label="状态" width="80">
+          <template #default="{ row }">
+            <el-tag :type="statusType(row.status)" size="small">{{ row.status || '在院' }}</el-tag>
+          </template>
+        </el-table-column>
+        <el-table-column prop="risk_level" label="风险" width="80">
+          <template #default="{ row }">
+            <el-tag v-if="row.risk_level" :type="riskType(row.risk_level)" size="small">{{ riskLabel(row.risk_level) }}</el-tag>
+            <span v-else style="color:#909399;font-size:12px;">未评估</span>
+          </template>
+        </el-table-column>
         <el-table-column prop="diagnosis" label="西医诊断" />
         <el-table-column prop="tcm_diagnosis" label="中医诊断" />
         <el-table-column prop="admission_date" label="入院日期" width="120" />
@@ -32,34 +43,50 @@
     <el-dialog v-model="showDialog" :title="isEdit ? '修改患者' : '新增患者'" width="700px">
       <el-form :model="formData" label-width="80px">
         <el-row :gutter="20">
-          <el-col :span="12">
-            <el-form-item label="姓名"><el-input v-model="formData.name" /></el-form-item>
-          </el-col>
-          <el-col :span="12">
+          <el-col :span="8"><el-form-item label="姓名"><el-input v-model="formData.name" /></el-form-item></el-col>
+          <el-col :span="8">
             <el-form-item label="性别">
-              <el-select v-model="formData.gender">
-                <el-option label="男" value="男" /><el-option label="女" value="女" />
+              <el-select v-model="formData.gender"><el-option label="男" value="男" /><el-option label="女" value="女" /></el-select>
+            </el-form-item>
+          </el-col>
+          <el-col :span="8"><el-form-item label="年龄"><el-input-number v-model="formData.age" :min="0" :max="120" /></el-form-item></el-col>
+        </el-row>
+        <el-row :gutter="20">
+          <el-col :span="8"><el-form-item label="门诊号"><el-input v-model="formData.patient_no" /></el-form-item></el-col>
+          <el-col :span="8"><el-form-item label="住院号"><el-input v-model="formData.inpatient_no" /></el-form-item></el-col>
+          <el-col :span="8"><el-form-item label="床号"><el-input v-model="formData.bed_no" /></el-form-item></el-col>
+        </el-row>
+        <el-row :gutter="20">
+          <el-col :span="8"><el-form-item label="科室"><el-input v-model="formData.department" /></el-form-item></el-col>
+          <el-col :span="8"><el-form-item label="责任医生"><el-input v-model="formData.responsible_doctor" /></el-form-item></el-col>
+          <el-col :span="8"><el-form-item label="责任护士"><el-input v-model="formData.responsible_nurse" /></el-form-item></el-col>
+        </el-row>
+        <el-row :gutter="20">
+          <el-col :span="8">
+            <el-form-item label="入院日期"><el-date-picker v-model="formData.admission_date" type="date" value-format="YYYY-MM-DD" /></el-form-item>
+          </el-col>
+          <el-col :span="8"><el-form-item label="西医诊断"><el-input v-model="formData.diagnosis" /></el-form-item></el-col>
+          <el-col :span="8">
+            <el-form-item label="状态">
+              <el-select v-model="formData.status">
+                <el-option label="在院" value="在院" /><el-option label="出院" value="出院" />
+                <el-option label="随访中" value="随访中" /><el-option label="结案" value="结案" />
+                <el-option label="失访" value="失访" />
               </el-select>
             </el-form-item>
           </el-col>
         </el-row>
         <el-row :gutter="20">
-          <el-col :span="12">
-            <el-form-item label="年龄"><el-input-number v-model="formData.age" :min="0" :max="120" /></el-form-item>
+          <el-col :span="8">
+            <el-form-item label="风险等级">
+              <el-select v-model="formData.risk_level" clearable>
+                <el-option label="低风险" value="low" /><el-option label="中风险" value="medium" /><el-option label="高风险" value="high" />
+              </el-select>
+            </el-form-item>
           </el-col>
-          <el-col :span="12">
-            <el-form-item label="电话"><el-input v-model="formData.phone" /></el-form-item>
-          </el-col>
+          <el-col :span="8"><el-form-item label="中医诊断"><el-input v-model="formData.tcm_diagnosis" /></el-form-item></el-col>
+          <el-col :span="8"><el-form-item label="电话"><el-input v-model="formData.phone" /></el-form-item></el-col>
         </el-row>
-        <el-row :gutter="20">
-          <el-col :span="12">
-            <el-form-item label="入院日期"><el-date-picker v-model="formData.admission_date" type="date" value-format="YYYY-MM-DD" /></el-form-item>
-          </el-col>
-          <el-col :span="12">
-            <el-form-item label="西医诊断"><el-input v-model="formData.diagnosis" /></el-form-item>
-          </el-col>
-        </el-row>
-        <el-form-item label="中医诊断"><el-input v-model="formData.tcm_diagnosis" /></el-form-item>
         <el-form-item label="过敏史"><el-input v-model="formData.allergy_history" type="textarea" :rows="2" /></el-form-item>
         <el-form-item label="既往史"><el-input v-model="formData.past_history" type="textarea" :rows="2" /></el-form-item>
         <el-form-item label="家族史"><el-input v-model="formData.family_history" type="textarea" :rows="2" /></el-form-item>
@@ -94,6 +121,8 @@ const emptyForm = () => ({
   diagnosis: '', tcm_diagnosis: '', notes: '',
   allergy_history: '', past_history: '', family_history: '',
   admission_assessment: '', discharge_summary: '',
+  patient_no: '', inpatient_no: '', bed_no: '', department: '',
+  responsible_doctor: '', responsible_nurse: '', status: '在院', risk_level: null,
 })
 const formData = ref(emptyForm())
 
@@ -156,5 +185,16 @@ async function importExcel(file) {
   ElMessage.success(res.data.message)
   store.fetchPatients()
   return false
+}
+
+function statusType(status) {
+  const map = { '在院': '', '出院': 'success', '随访中': 'warning', '结案': 'info', '失访': 'danger' }
+  return map[status] || ''
+}
+function riskType(level) {
+  return level === 'high' ? 'danger' : (level === 'medium' ? 'warning' : 'success')
+}
+function riskLabel(level) {
+  return { low: '低风险', medium: '中风险', high: '高风险' }[level] || level
 }
 </script>

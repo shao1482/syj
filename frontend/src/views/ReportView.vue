@@ -14,7 +14,8 @@
         <el-select v-model="selectedPatientId" placeholder="选择患者" @change="loadTrend" style="width: 180px;" size="small">
           <el-option v-for="p in patients" :key="p.id" :label="p.name" :value="p.id" />
         </el-select>
-        <el-button type="success" size="small" @click="runAiAnalysis" :loading="analysisLoading">智能分析</el-button>
+        <el-button type="success" size="small" @click="runAgentAnalysis" :loading="agentLoading">多Agent协作分析</el-button>
+        <el-button size="small" @click="runAiAnalysis" :loading="analysisLoading">原引擎分析</el-button>
         <el-button size="small" @click="showModelConfig = true">模型配置</el-button>
       </div>
 
@@ -30,8 +31,174 @@
         </el-col>
       </el-row>
 
-      <!-- AI智能分析结果 -->
-      <div v-if="analysisResult" style="margin-top: 20px;">
+      <!-- 多Agent协作分析结果 -->
+      <div v-if="agentResult" style="margin-top: 20px;">
+        <el-divider content-position="left">多Agent协作分析报告</el-divider>
+
+        <!-- Agent流水线进度 -->
+        <el-steps :active="agentResult.pipeline_steps?.length || 0" finish-status="success" align-center style="margin-bottom: 24px;">
+          <el-step v-for="step in agentResult.pipeline_steps" :key="step.agent"
+            :title="step.agent" :description="step.description"
+            :status="step.status === 'success' ? 'success' : 'error'" />
+        </el-steps>
+
+        <!-- 1. 数据采集结果 -->
+        <el-card shadow="hover" style="margin-bottom: 16px;" v-if="agentResult.collector?.rule_analysis">
+          <template #header>
+            <div style="display:flex; justify-content:space-between;">
+              <span style="color:#909399; font-weight:bold;">数据采集Agent</span>
+              <el-tag size="small" :type="agentResult.collector.confidence >= 0.8 ? 'success' : 'warning'">
+                置信度 {{ (agentResult.collector.confidence * 100).toFixed(0) }}%
+              </el-tag>
+            </div>
+          </template>
+          <el-descriptions :column="3" border>
+            <el-descriptions-item label="患者">{{ agentResult.collector.rule_analysis.patient_info?.name }}</el-descriptions-item>
+            <el-descriptions-item label="年龄">{{ agentResult.collector.rule_analysis.patient_info?.age }}岁</el-descriptions-item>
+            <el-descriptions-item label="诊断">{{ agentResult.collector.rule_analysis.patient_info?.diagnosis }}</el-descriptions-item>
+            <el-descriptions-item label="证候记录">{{ agentResult.collector.rule_analysis.completeness?.tcm_records }} 条</el-descriptions-item>
+            <el-descriptions-item label="检验记录">{{ agentResult.collector.rule_analysis.completeness?.lab_records }} 条</el-descriptions-item>
+            <el-descriptions-item label="生活质量">{{ agentResult.collector.rule_analysis.completeness?.qol_records }} 条</el-descriptions-item>
+            <el-descriptions-item label="数据质量">{{ agentResult.collector.rule_analysis.completeness?.data_quality }}</el-descriptions-item>
+            <el-descriptions-item label="缺失项">{{ agentResult.collector.rule_analysis.completeness?.missing_domains?.join(', ') || '无' }}</el-descriptions-item>
+          </el-descriptions>
+          <div v-if="agentResult.collector.model_analysis" style="margin-top: 12px; padding: 12px; background: #f0f9eb; border-radius: 4px;">
+            <b>模型增强：</b>{{ agentResult.collector.model_analysis }}
+          </div>
+        </el-card>
+
+        <!-- 2. 指标解析结果 -->
+        <el-row :gutter="20" style="margin-bottom: 16px;" v-if="agentResult.analyzer?.rule_analysis">
+          <el-col :span="8">
+            <el-card shadow="hover">
+              <template #header><span style="color:#409EFF; font-weight:bold;">趋势分析</span></template>
+              <el-descriptions :column="1" border size="small">
+                <el-descriptions-item v-for="(t, key) in agentResult.analyzer.rule_analysis.trends" :key="key" :label="key">
+                  {{ t.direction }} (斜率: {{ t.slope?.toFixed(2) }}, 最新值: {{ t.latest }})
+                </el-descriptions-item>
+              </el-descriptions>
+            </el-card>
+          </el-col>
+          <el-col :span="8">
+            <el-card shadow="hover">
+              <template #header><span style="color:#E6A23C; font-weight:bold;">异常指标</span></template>
+              <el-tag v-for="a in agentResult.analyzer.rule_analysis.anomalies" :key="a.field"
+                :type="a.severity === 'high' ? 'danger' : (a.severity === 'medium' ? 'warning' : 'info')"
+                style="margin: 4px;" size="small">
+                {{ a.label }}: {{ a.value }} (阈值{{ a.threshold }})
+              </el-tag>
+            </el-card>
+          </el-col>
+          <el-col :span="8">
+            <el-card shadow="hover">
+              <template #header><span style="color:#67C23A; font-weight:bold;">关联分析</span></template>
+              <el-descriptions :column="1" border size="small">
+                <el-descriptions-item v-for="c in agentResult.analyzer.rule_analysis.correlations" :key="c.pair" :label="c.pair">
+                  r={{ c.correlation }} — {{ c.interpretation }}
+                </el-descriptions-item>
+              </el-descriptions>
+            </el-card>
+          </el-col>
+        </el-row>
+
+        <!-- 3. 风险评估结果 -->
+        <el-card shadow="hover" style="margin-bottom: 16px;" v-if="agentResult.assessor?.rule_analysis">
+          <template #header>
+            <div style="display:flex; justify-content:space-between;">
+              <span style="color:#F56C6C; font-weight:bold;">风险评估Agent</span>
+              <el-tag :type="riskTagType" size="large">
+                {{ agentResult.assessor.rule_analysis.risk_level_label }} ({{ agentResult.assessor.rule_analysis.risk_score }}分)
+              </el-tag>
+            </div>
+          </template>
+          <el-row :gutter="20">
+            <el-col :span="8">
+              <h4>风险因素</h4>
+              <el-descriptions :column="1" border size="small">
+                <el-descriptions-item v-for="f in agentResult.assessor.rule_analysis.risk_factors" :key="f.factor" :label="f.domain">
+                  {{ f.factor }} <el-tag size="small" type="warning">+{{ f.contribution }}分</el-tag>
+                </el-descriptions-item>
+              </el-descriptions>
+            </el-col>
+            <el-col :span="8">
+              <h4>预警标记</h4>
+              <el-alert v-for="flag in agentResult.assessor.rule_analysis.alert_flags" :key="flag.rule"
+                :title="flag.rule" :description="flag.message"
+                :type="flag.level === 'high' ? 'error' : 'warning'" show-icon :closable="false" style="margin-bottom: 8px;" />
+              <p v-if="!agentResult.assessor.rule_analysis.alert_flags?.length" style="color:#909399;">无预警标记</p>
+            </el-col>
+            <el-col :span="8">
+              <div v-if="agentResult.assessor.model_analysis" style="padding: 12px; background: #f0f9eb; border-radius: 4px;">
+                <b>模型增强评估：</b>{{ agentResult.assessor.model_analysis }}
+              </div>
+            </el-col>
+          </el-row>
+        </el-card>
+
+        <!-- 4. 干预建议结果 -->
+        <el-row :gutter="20" style="margin-bottom: 16px;" v-if="agentResult.recommender?.rule_analysis">
+          <el-col :span="6">
+            <el-card shadow="hover">
+              <template #header><span style="font-weight:bold;">随访计划</span></template>
+              <p>{{ agentResult.recommender.rule_analysis.followup_plan?.frequency }}</p>
+              <el-tag :type="riskTagType" size="small">{{ agentResult.recommender.rule_analysis.followup_plan?.risk_level }}风险</el-tag>
+            </el-card>
+          </el-col>
+          <el-col :span="6">
+            <el-card shadow="hover">
+              <template #header><span style="font-weight:bold;">复查计划</span></template>
+              <ul><li v-for="r in agentResult.recommender.rule_analysis.recheck_plan" style="margin-bottom: 4px;">{{ r }}</li></ul>
+            </el-card>
+          </el-col>
+          <el-col :span="6">
+            <el-card shadow="hover">
+              <template #header><span style="color:#E6A23C; font-weight:bold;">治疗建议</span></template>
+              <el-descriptions :column="1" border size="small">
+                <el-descriptions-item v-for="s in agentResult.recommender.rule_analysis.treatment_suggestions" :key="s.suggestion" :label="s.type">
+                  {{ s.suggestion }}<br/><small>{{ s.rationale }}</small>
+                </el-descriptions-item>
+              </el-descriptions>
+            </el-card>
+          </el-col>
+          <el-col :span="6">
+            <el-card shadow="hover">
+              <template #header><span style="color:#67C23A; font-weight:bold;">生活建议</span></template>
+              <el-descriptions :column="1" border size="small">
+                <el-descriptions-item v-for="l in agentResult.recommender.rule_analysis.lifestyle_advice" :key="l.category" :label="l.category">
+                  {{ l.advice }}
+                </el-descriptions-item>
+              </el-descriptions>
+            </el-card>
+          </el-col>
+        </el-row>
+
+        <!-- 预警建议 -->
+        <el-card shadow="hover" style="margin-bottom: 16px;" v-if="agentResult.recommender?.rule_analysis?.alert_suggestions?.length">
+          <template #header><span style="color:#F56C6C; font-weight:bold;">预警提示</span></template>
+          <el-alert v-for="a in agentResult.recommender.rule_analysis.alert_suggestions" :key="a.message"
+            :title="a.source" :description="a.message"
+            :type="a.level === 'high' ? 'error' : 'warning'" show-icon :closable="false" style="margin-bottom: 8px;" />
+        </el-card>
+
+        <!-- 闭环验证 -->
+        <el-card shadow="hover" v-if="agentResult.verification">
+          <template #header>
+            <div style="display:flex; justify-content:space-between;">
+              <span style="font-weight:bold;">闭环验证</span>
+              <el-tag :type="agentResult.verification.consistent ? 'success' : 'danger'">
+                {{ agentResult.verification.consistent ? '验证通过' : '验证异常' }}
+              </el-tag>
+            </div>
+          </template>
+          <p>{{ agentResult.verification.summary }}</p>
+          <ul v-if="agentResult.verification.gaps?.length">
+            <li v-for="g in agentResult.verification.gaps" style="color: #F56C6C;">{{ g }}</li>
+          </ul>
+        </el-card>
+      </div>
+
+      <!-- 原引擎分析结果 -->
+      <div v-if="analysisResult && !agentResult" style="margin-top: 20px;">
         <el-divider content-position="left">智能分析报告 — {{ analysisResult.patient_name }}</el-divider>
         <el-row :gutter="20">
           <el-col :span="8">
@@ -71,8 +238,6 @@
                 <el-descriptions-item label="中医诊断">{{ analysisResult.tcm_diagnosis }}</el-descriptions-item>
                 <el-descriptions-item label="证候记录">{{ analysisResult.data_summary?.tcm_records }} 条</el-descriptions-item>
                 <el-descriptions-item label="检验记录">{{ analysisResult.data_summary?.lab_records }} 条</el-descriptions-item>
-                <el-descriptions-item label="待处理预警">{{ analysisResult.pending_alerts }} 条</el-descriptions-item>
-                <el-descriptions-item label="治疗记录">{{ analysisResult.data_summary?.treatment_records }} 条</el-descriptions-item>
               </el-descriptions>
               <div v-if="analysisResult.ollama_enhanced" style="margin-top: 16px; padding: 12px; background: #f0f9eb; border-radius: 4px;">
                 <b>Ollama增强分析：</b><p>{{ analysisResult.ollama_enhanced }}</p>
@@ -119,8 +284,15 @@ const selectedPatientId = ref(null)
 const trend = ref(null)
 const analysisResult = ref(null)
 const analysisLoading = ref(false)
+const agentResult = ref(null)
+const agentLoading = ref(false)
 const showModelConfig = ref(false)
 const modelConfig = ref({ model_provider: 'template', ollama_url: 'http://localhost:11434', ollama_model: 'qwen2.5:7b' })
+
+const riskTagType = computed(() => {
+  const level = agentResult.value?.assessor?.rule_analysis?.risk_level
+  return level === 'high' ? 'danger' : (level === 'medium' ? 'warning' : 'success')
+})
 
 const tcmTrendData = computed(() => ({
   xData: trend.value?.tcm_scores?.map(s => s.date) || [],
@@ -141,7 +313,7 @@ const labTrendData = computed(() => ({
 onMounted(async () => {
   overview.value = (await api.getOverview()).data
   patients.value = (await api.getPatients()).data
-  try { modelConfig.value = (await api.request.get('/reports/analysis-config')).data } catch {}
+  try { modelConfig.value = (await api.getAnalysisConfig()).data } catch {}
 })
 
 async function loadTrend() {
@@ -164,9 +336,24 @@ async function runAiAnalysis() {
   analysisLoading.value = false
 }
 
+async function runAgentAnalysis() {
+  if (!selectedPatientId.value) {
+    ElMessage.warning('请先选择患者')
+    return
+  }
+  agentLoading.value = true
+  try {
+    agentResult.value = (await api.agentAnalysis(selectedPatientId.value)).data
+    ElMessage.success('多Agent协作分析完成')
+  } catch (e) {
+    ElMessage.error('分析失败: ' + (e.response?.data?.detail || e.message))
+  }
+  agentLoading.value = false
+}
+
 async function saveModelConfig() {
   try {
-    await api.request.put('/reports/analysis-config', modelConfig.value)
+    await api.updateAnalysisConfig(modelConfig.value)
     ElMessage.success('模型配置已保存')
     showModelConfig.value = false
   } catch (e) {

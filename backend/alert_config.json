@@ -1,0 +1,68 @@
+{
+  "lab_thresholds": {
+    "alt": {
+      "high": 40,
+      "low": null,
+      "label": "ALT"
+    },
+    "ast": {
+      "high": 40,
+      "low": null,
+      "label": "AST"
+    },
+    "hgb": {
+      "high": 160,
+      "low": 90,
+      "label": "HGB"
+    },
+    "wbc": {
+      "high": 9.5,
+      "low": 3.5,
+      "label": "WBC"
+    },
+    "plt": {
+      "high": 300,
+      "low": 100,
+      "label": "PLT"
+    },
+    "tbil": {
+      "high": 17.1,
+      "low": null,
+      "label": "TBIL"
+    },
+    "rbc": {
+      "high": 5.5,
+      "low": 3.5,
+      "label": "RBC"
+    },
+    "alb": {
+      "high": null,
+      "low": 35,
+      "label": "ALB"
+    }
+  },
+  "combined_rules": [
+    {
+      "name": "肝纤维化风险",
+      "message": "ALT升高 + AST/ALT>1，提示肝纤维化风险",
+      "level": "high",
+      "enabled": true
+    },
+    {
+      "name": "胆汁淤积倾向",
+      "message": "ALT升高 + TBIL升高，提示胆汁淤积倾向",
+      "level": "high",
+      "enabled": true
+    },
+    {
+      "name": "贫血合并感染",
+      "message": "HGB偏低 + WBC偏高，提示贫血合并感染",
+      "level": "high",
+      "enabled": true
+    }
+  ],
+  "tcm_change_threshold": 5,
+  "qol_drop_ratio": 0.7,
+  "followup_overdue_days": 30,
+  "dynamic_threshold_ratio": 1.2
+}

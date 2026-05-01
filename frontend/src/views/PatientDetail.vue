@@ -9,14 +9,27 @@
       </div>
     </div>
 
-    <el-descriptions title="患者基本信息" :column="3" border style="margin-bottom: 20px;">
+    <el-descriptions title="患者基本信息" :column="4" border style="margin-bottom: 20px;">
       <el-descriptions-item label="姓名">{{ patient.name }}</el-descriptions-item>
       <el-descriptions-item label="性别">{{ patient.gender }}</el-descriptions-item>
       <el-descriptions-item label="年龄">{{ patient.age }}</el-descriptions-item>
-      <el-descriptions-item label="电话">{{ patient.phone }}</el-descriptions-item>
+      <el-descriptions-item label="门诊号">{{ patient.patient_no || '未填写' }}</el-descriptions-item>
+      <el-descriptions-item label="住院号">{{ patient.inpatient_no || '未填写' }}</el-descriptions-item>
+      <el-descriptions-item label="床号">{{ patient.bed_no || '未填写' }}</el-descriptions-item>
+      <el-descriptions-item label="科室">{{ patient.department || '未填写' }}</el-descriptions-item>
+      <el-descriptions-item label="状态">
+        <el-tag :type="statusType(patient.status)">{{ patient.status || '在院' }}</el-tag>
+      </el-descriptions-item>
+      <el-descriptions-item label="风险等级">
+        <el-tag v-if="patient.risk_level" :type="riskType(patient.risk_level)">{{ riskLabel(patient.risk_level) }}</el-tag>
+        <span v-else style="color:#909399;">未评估</span>
+      </el-descriptions-item>
+      <el-descriptions-item label="责任医生">{{ patient.responsible_doctor || '未填写' }}</el-descriptions-item>
+      <el-descriptions-item label="责任护士">{{ patient.responsible_nurse || '未填写' }}</el-descriptions-item>
       <el-descriptions-item label="入院日期">{{ patient.admission_date }}</el-descriptions-item>
       <el-descriptions-item label="西医诊断">{{ patient.diagnosis }}</el-descriptions-item>
       <el-descriptions-item label="中医诊断">{{ patient.tcm_diagnosis }}</el-descriptions-item>
+      <el-descriptions-item label="电话">{{ patient.phone }}</el-descriptions-item>
       <el-descriptions-item label="过敏史">{{ patient.allergy_history || '无' }}</el-descriptions-item>
       <el-descriptions-item label="既往史">{{ patient.past_history || '无' }}</el-descriptions-item>
       <el-descriptions-item label="家族史">{{ patient.family_history || '无' }}</el-descriptions-item>
@@ -29,34 +42,50 @@
     <el-dialog v-model="showEditDialog" title="编辑患者信息" width="700px">
       <el-form :model="editForm" label-width="80px">
         <el-row :gutter="20">
-          <el-col :span="12">
-            <el-form-item label="姓名"><el-input v-model="editForm.name" /></el-form-item>
-          </el-col>
-          <el-col :span="12">
+          <el-col :span="8"><el-form-item label="姓名"><el-input v-model="editForm.name" /></el-form-item></el-col>
+          <el-col :span="8">
             <el-form-item label="性别">
-              <el-select v-model="editForm.gender">
-                <el-option label="男" value="男" /><el-option label="女" value="女" />
+              <el-select v-model="editForm.gender"><el-option label="男" value="男" /><el-option label="女" value="女" /></el-select>
+            </el-form-item>
+          </el-col>
+          <el-col :span="8"><el-form-item label="年龄"><el-input-number v-model="editForm.age" :min="0" :max="120" /></el-form-item></el-col>
+        </el-row>
+        <el-row :gutter="20">
+          <el-col :span="8"><el-form-item label="门诊号"><el-input v-model="editForm.patient_no" /></el-form-item></el-col>
+          <el-col :span="8"><el-form-item label="住院号"><el-input v-model="editForm.inpatient_no" /></el-form-item></el-col>
+          <el-col :span="8"><el-form-item label="床号"><el-input v-model="editForm.bed_no" /></el-form-item></el-col>
+        </el-row>
+        <el-row :gutter="20">
+          <el-col :span="8"><el-form-item label="科室"><el-input v-model="editForm.department" /></el-form-item></el-col>
+          <el-col :span="8"><el-form-item label="责任医生"><el-input v-model="editForm.responsible_doctor" /></el-form-item></el-col>
+          <el-col :span="8"><el-form-item label="责任护士"><el-input v-model="editForm.responsible_nurse" /></el-form-item></el-col>
+        </el-row>
+        <el-row :gutter="20">
+          <el-col :span="8">
+            <el-form-item label="入院日期"><el-date-picker v-model="editForm.admission_date" type="date" value-format="YYYY-MM-DD" /></el-form-item>
+          </el-col>
+          <el-col :span="8"><el-form-item label="西医诊断"><el-input v-model="editForm.diagnosis" /></el-form-item></el-col>
+          <el-col :span="8">
+            <el-form-item label="状态">
+              <el-select v-model="editForm.status">
+                <el-option label="在院" value="在院" /><el-option label="出院" value="出院" />
+                <el-option label="随访中" value="随访中" /><el-option label="结案" value="结案" />
+                <el-option label="失访" value="失访" />
               </el-select>
             </el-form-item>
           </el-col>
         </el-row>
         <el-row :gutter="20">
-          <el-col :span="12">
-            <el-form-item label="年龄"><el-input-number v-model="editForm.age" :min="0" :max="120" /></el-form-item>
+          <el-col :span="8">
+            <el-form-item label="风险等级">
+              <el-select v-model="editForm.risk_level" clearable>
+                <el-option label="低风险" value="low" /><el-option label="中风险" value="medium" /><el-option label="高风险" value="high" />
+              </el-select>
+            </el-form-item>
           </el-col>
-          <el-col :span="12">
-            <el-form-item label="电话"><el-input v-model="editForm.phone" /></el-form-item>
-          </el-col>
+          <el-col :span="8"><el-form-item label="中医诊断"><el-input v-model="editForm.tcm_diagnosis" /></el-form-item></el-col>
+          <el-col :span="8"><el-form-item label="电话"><el-input v-model="editForm.phone" /></el-form-item></el-col>
         </el-row>
-        <el-row :gutter="20">
-          <el-col :span="12">
-            <el-form-item label="入院日期"><el-date-picker v-model="editForm.admission_date" type="date" value-format="YYYY-MM-DD" /></el-form-item>
-          </el-col>
-          <el-col :span="12">
-            <el-form-item label="西医诊断"><el-input v-model="editForm.diagnosis" /></el-form-item>
-          </el-col>
-        </el-row>
-        <el-form-item label="中医诊断"><el-input v-model="editForm.tcm_diagnosis" /></el-form-item>
         <el-form-item label="过敏史"><el-input v-model="editForm.allergy_history" type="textarea" :rows="2" /></el-form-item>
         <el-form-item label="既往史"><el-input v-model="editForm.past_history" type="textarea" :rows="2" /></el-form-item>
         <el-form-item label="家族史"><el-input v-model="editForm.family_history" type="textarea" :rows="2" /></el-form-item>
@@ -83,6 +112,11 @@
           <el-table-column prop="tongue_score" label="舌象" width="80" />
           <el-table-column prop="pulse_score" label="脉象" width="80" />
           <el-table-column prop="total_score" label="总分" width="80" />
+          <el-table-column label="操作" width="120">
+            <template #default="{ row }">
+              <el-button size="small" type="danger" @click="deleteTcmScore(row.id)">删除</el-button>
+            </template>
+          </el-table-column>
         </el-table>
       </el-tab-pane>
 
@@ -98,6 +132,11 @@
           <el-table-column prop="ast" label="AST" width="80" />
           <el-table-column prop="tbil" label="TBIL" width="80" />
           <el-table-column prop="alb" label="ALB" width="80" />
+          <el-table-column label="操作" width="120">
+            <template #default="{ row }">
+              <el-button size="small" type="danger" @click="deleteLabTest(row.id)">删除</el-button>
+            </template>
+          </el-table-column>
         </el-table>
       </el-tab-pane>
 
@@ -112,6 +151,11 @@
           <el-table-column prop="physical_function" label="生理功能" width="100" />
           <el-table-column prop="mental_health" label="心理" width="80" />
           <el-table-column prop="total_score" label="总分" width="80" />
+          <el-table-column label="操作" width="120">
+            <template #default="{ row }">
+              <el-button size="small" type="danger" @click="deleteQol(row.id)">删除</el-button>
+            </template>
+          </el-table-column>
         </el-table>
       </el-tab-pane>
 
@@ -125,6 +169,11 @@
           <el-table-column prop="dosage" label="剂量" width="100" />
           <el-table-column prop="effect_rating" label="疗效评价" width="100" />
           <el-table-column prop="followup_note" label="随访记录" />
+          <el-table-column label="操作" width="120">
+            <template #default="{ row }">
+              <el-button size="small" type="danger" @click="deleteTreatment(row.id)">删除</el-button>
+            </template>
+          </el-table-column>
         </el-table>
       </el-tab-pane>
 
@@ -135,6 +184,10 @@
       <el-tab-pane label="随访管理" name="followup">
         <FollowupView />
       </el-tab-pane>
+
+      <el-tab-pane label="临床时间轴" name="timeline">
+        <ClinicalTimeline :patientId="patient.id" />
+      </el-tab-pane>
     </el-tabs>
   </div>
 </template>
@@ -144,7 +197,7 @@ import { ref, computed, onMounted, watch } from 'vue'
 import { useRoute } from 'vue-router'
 import { usePatientStore } from '../stores/patient'
 import { useClinicalStore } from '../stores/clinical'
-import { ElMessage } from 'element-plus'
+import { ElMessage, ElMessageBox } from 'element-plus'
 import api from '../api'
 import TcmScoreForm from '../components/TcmScoreForm.vue'
 import LabTestForm from '../components/LabTestForm.vue'
@@ -153,6 +206,7 @@ import TreatmentForm from '../components/TreatmentForm.vue'
 import TrendChart from '../components/TrendChart.vue'
 import EfficacyView from '../components/EfficacyView.vue'
 import FollowupView from '../views/FollowupView.vue'
+import ClinicalTimeline from '../components/ClinicalTimeline.vue'
 
 const route = useRoute()
 const store = usePatientStore()
@@ -206,6 +260,34 @@ async function handleEditSave() {
   ElMessage.success('修改成功')
 }
 
+async function deleteTcmScore(id) {
+  await ElMessageBox.confirm('确认删除此证候评分?', '提示', { type: 'warning' })
+  await api.deleteTcmScore(route.params.id, id)
+  ElMessage.success('已删除')
+  loadTcm()
+}
+
+async function deleteLabTest(id) {
+  await ElMessageBox.confirm('确认删除此检验记录?', '提示', { type: 'warning' })
+  await api.deleteLabTest(route.params.id, id)
+  ElMessage.success('已删除')
+  loadLab()
+}
+
+async function deleteQol(id) {
+  await ElMessageBox.confirm('确认删除此生活质量记录?', '提示', { type: 'warning' })
+  await api.deleteQol(route.params.id, id)
+  ElMessage.success('已删除')
+  loadQol()
+}
+
+async function deleteTreatment(id) {
+  await ElMessageBox.confirm('确认删除此治疗方案?', '提示', { type: 'warning' })
+  await api.deleteTreatment(route.params.id, id)
+  ElMessage.success('已删除')
+  loadTreatment()
+}
+
 async function exportPdf() {
   const res = await api.exportPatientPdf(route.params.id)
   const url = window.URL.createObjectURL(new Blob([res.data]))
@@ -226,6 +308,17 @@ async function exportLabExcel() {
   a.click()
   window.URL.revokeObjectURL(url)
   ElMessage.success('Excel已导出')
+}
+
+function statusType(status) {
+  const map = { '在院': '', '出院': 'success', '随访中': 'warning', '结案': 'info', '失访': 'danger' }
+  return map[status] || ''
+}
+function riskType(level) {
+  return level === 'high' ? 'danger' : (level === 'medium' ? 'warning' : 'success')
+}
+function riskLabel(level) {
+  return { low: '低风险', medium: '中风险', high: '高风险' }[level] || level
 }
 
 watch(activeTab, (tab) => {
